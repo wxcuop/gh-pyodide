@@ -42,7 +42,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ github.event.inputs.version }}
-        run: ./.github/scripts/download_pyodide.sh "${VERSION}"
+        run: ./.github/workflows/scripts/download_pyodide.sh "${VERSION}"
 
       - name: Commit and push to Pages branch
         env:
