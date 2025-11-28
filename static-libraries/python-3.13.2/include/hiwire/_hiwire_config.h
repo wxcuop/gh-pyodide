@@ -1,0 +1,8 @@
+#define _HIWIRE_EMSCRIPTEN_DEDUPLICATE 1
+
+
+
+
+
+
+#define _HIWIRE_EXTERN_FAIL 1
