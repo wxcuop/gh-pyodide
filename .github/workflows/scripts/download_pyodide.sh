@@ -9,10 +9,13 @@ VERSION="${1:-latest}"
 API_BASE="https://api.github.com/repos/pyodide/pyodide"
 WORKDIR="$(pwd)/.github/tmp-pyodide-work"
 DISTDIR="$(pwd)/pyodide-dist"
+PYODIDE_DIR="$(pwd)/pyodide"
 
 mkdir -p "${WORKDIR}"
 rm -rf "${DISTDIR}"
 mkdir -p "${DISTDIR}"
+rm -rf "${PYODIDE_DIR}"
+mkdir -p "${PYODIDE_DIR}"
 
 # fetch release JSON
 if [ "${VERSION}" = "latest" ]; then
@@ -60,7 +63,29 @@ echo "${RELEASE_JSON}" | jq -r '.assets[] | [.name, .browser_download_url] | @ts
   esac
 done
 
+# Create index.html
+cat > "${DISTDIR}/index.html" <<EOF
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pyodide Demo</title>
+</head>
+<body>
+  <h1>Welcome to Pyodide!</h1>
+  <p>This is a basic GitHub Pages site for your Pyodide deployment.</p>
+  <ul>
+    <li><a href="package.json">View package.json</a></li>
+    <li><a href="https://pyodide.org/en/stable/">Learn more about Pyodide</a></li>
+  </ul>
+</body>
+</html>
+EOF
+
+# Copy contents to pyodide folder for deployment
+cp -r "${DISTDIR}/." "${PYODIDE_DIR}/"
+
 # cleanup
 rm -rf "${WORKDIR}"
 
-echo "Pyodide release ${VERSION} downloaded and extracted to ${DISTDIR}"
+echo "Pyodide release ${VERSION} downloaded, extracted to ${DISTDIR}, and prepared in ${PYODIDE_DIR} with index.html"
