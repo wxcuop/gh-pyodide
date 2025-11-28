@@ -64,7 +64,7 @@ echo "${RELEASE_JSON}" | jq -r '.assets[] | [.name, .browser_download_url] | @ts
 done
 
 # Create index.html
-cat > "${DISTDIR}/index.html" <<EOF
+cat > "${DISTDIR}/pyodide/index.html" <<EOF
 <!DOCTYPE html>
 <html lang="en">
 <head>
