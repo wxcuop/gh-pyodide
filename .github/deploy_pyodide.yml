@@ -1,0 +1,92 @@
+name: Deploy Pyodide to GitHub Pages
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Pyodide release tag (or "latest")'
+        required: false
+        default: 'latest'
+      branch:
+        description: 'Target branch to deploy to (GitHub Pages branch)'
+        required: false
+        default: 'gh-pages'
+      commit_message:
+        description: 'Commit message'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  pages: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Install tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq curl unzip
+
+      - name: Ensure script is executable
+        run: chmod +x ./.github/scripts/download_pyodide.sh
+
+      - name: Download and extract Pyodide release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ github.event.inputs.version }}
+        run: ./.github/scripts/download_pyodide.sh "${VERSION}"
+
+      - name: Commit and push to Pages branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_BRANCH: ${{ github.event.inputs.branch }}
+          VERSION: ${{ github.event.inputs.version }}
+          COMMIT_MESSAGE_INPUT: ${{ github.event.inputs.commit_message }}
+        run: |
+          set -euxo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # prepare commit message
+          if [ -z "${COMMIT_MESSAGE_INPUT}" ]; then
+            COMMIT_MSG="Deploy Pyodide ${VERSION}"
+          else
+            COMMIT_MSG="${COMMIT_MESSAGE_INPUT}"
+          fi
+
+          # Switch to target branch (create orphan if missing)
+          if git show-ref --quiet refs/heads/"${TARGET_BRANCH}"; then
+            git checkout "${TARGET_BRANCH}"
+            # remove everything (except .git)
+            git rm -rf . || true
+          else
+            git checkout --orphan "${TARGET_BRANCH}"
+            # ensure index is clear
+            git rm -rf . || true
+          fi
+
+          # copy built distribution into repo root
+          if [ -d pyodide-dist ]; then
+            cp -R pyodide-dist/. .
+          else
+            echo "pyodide-dist not found; nothing to deploy"
+            exit 1
+          fi
+
+          git add -A
+          # commit only if there are changes
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "${COMMIT_MSG}"
+            git push -u origin "${TARGET_BRANCH}" --force
+          fi
